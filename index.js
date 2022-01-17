@@ -4,13 +4,13 @@ import fs from 'fs';
 import { Command } from 'commander/esm.mjs';
 
 const ALLOWED_INPUT_TYPES = [
-  'jpg',
-  'jpeg',
-  'avif',
-  'webp',
-  'png',
-  'gif',
-  'svg',
+  '.jpg',
+  '.jpeg',
+  '.avif',
+  '.webp',
+  '.png',
+  '.gif',
+  '.svg',
 ];
 
 const program = new Command();
@@ -46,6 +46,13 @@ console.debug(options);
 // const widthsNumeric = options?.widths?.map((width) => parseInt(width));
 const imagesDir = path.join(process.cwd(), options.dir);
 
-const imageFiles = await fs.promises.readdir(imagesDir);
+const directoryFiles = await fs.promises.readdir(imagesDir);
+
+console.log(ALLOWED_INPUT_TYPES.includes('jpeg'));
+
+const imageFiles = directoryFiles.filter((file) => {
+  const fileExt = path.extname(file).toLowerCase();
+  return ALLOWED_INPUT_TYPES.includes(fileExt);
+});
 
 console.log(imageFiles);
