@@ -1,0 +1,23 @@
+{
+  "name": "web-image-cli",
+  "version": "1.0.0",
+  "description": "Creates image variants from a base image or folder of images",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "webimages": "index.js"
+  },
+  "author": "Jacob Goodwin",
+  "license": "ISC",
+  "devDependencies": {
+    "@babel/plugin-syntax-top-level-await": "^7.14.5",
+    "eslint": "^8.7.0",
+    "prettier": "^2.5.1"
+  },
+  "dependencies": {
+    "commander": "^8.3.0"
+  }
+}
