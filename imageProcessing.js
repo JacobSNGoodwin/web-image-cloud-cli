@@ -9,7 +9,9 @@ const executePipeline = (inputStream, sharpPipeline) =>
       .on('error', (e) => reject(e))
       .pipe(sharpPipeline)
       .on('error', (e) => reject(e))
-      .on('close', () => resolve());
+      .on('finish', () => {
+        resolve({});
+      });
   });
 
 const transformImages = async ({
@@ -23,9 +25,11 @@ const transformImages = async ({
 
   const { name: inputFileName } = path.parse(filePath);
 
+  const maxListeners = widths.length * formats.length + 3;
+
   const sharpPipeline = sharp({
     failOnError: false,
-  });
+  }).setMaxListeners(maxListeners);
 
   widths.forEach((width) =>
     formats.forEach((format) => {
@@ -45,7 +49,9 @@ const transformImages = async ({
     })
   );
 
-  return executePipeline(inputStream, sharpPipeline);
+  await executePipeline(inputStream, sharpPipeline);
+
+  console.log(`Successfully transformed - ${filePath}`);
 };
 
 export { transformImages };
