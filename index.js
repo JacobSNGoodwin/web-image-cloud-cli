@@ -4,7 +4,7 @@ import fs from 'fs';
 import { Command } from 'commander/esm.mjs';
 import pAll from 'p-all';
 
-import { transformImages } from './imageProcessing.js';
+import { transformImages, createLqips } from './imageProcessing.js';
 
 const ALLOWED_INPUT_TYPES = [
   '.jpg',
@@ -49,6 +49,10 @@ program
     '-f, --formats <img format...>',
     'output image format extensions',
     DEFAULT_OUTPUTS
+  )
+  .option(
+    '--lqip-only',
+    'use if you merely want to get base64 image placeholder data'
   );
 
 program.parse(process.argv);
@@ -87,6 +91,15 @@ const widthConversions = imageFiles.map(async (fileName) => {
     });
 });
 
-await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
+if (!options.lqipOnly) {
+  console.log(
+    `Create images of widths ${widthsNumeric} and formats ${options.formats}`
+  );
+  await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
+  console.log('Image transformations have completed!');
+}
 
-console.log('Image transformations have completed!');
+console.log('Creating Low-Quality image place holders');
+const lqipMap = await createLqips(imageFiles, outDir);
+console.log('LQIPs created');
+console.log(lqipMap);
