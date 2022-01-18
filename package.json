@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "commander": "^8.3.0",
+    "p-all": "^4.0.0",
     "sharp": "^0.29.3",
     "sqip": "^0.3.3"
   }

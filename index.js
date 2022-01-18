@@ -2,6 +2,9 @@
 import path from 'path';
 import fs from 'fs';
 import { Command } from 'commander/esm.mjs';
+import pAll from 'p-all';
+
+import { transformImages } from './imageProcessing.js';
 
 const ALLOWED_INPUT_TYPES = [
   '.jpg',
@@ -12,6 +15,10 @@ const ALLOWED_INPUT_TYPES = [
   '.gif',
   '.svg',
 ];
+
+const DEFAULT_OUTPUTS = ['jpg', 'webp'];
+
+const CONCURRENCY_LIMIT = 5;
 
 const program = new Command();
 
@@ -26,33 +33,60 @@ program
   .option(
     '-o, --outdir <output directory>',
     'the relative directory for outputting the files',
-    './'
+    './web'
   )
   .option(
     '-w, --widths <img widths...>',
     'A list of the widths (variants) to create for the image',
     ['800', '1200', '1800', '2400']
   )
-  .option('-f, --formats <img format...>', 'output image format extensions', [
-    'jpeg',
-    'webp',
-  ]);
+  .option(
+    '-q, --quality <quality>',
+    'Image quality from 1-100 for jpeg and webp',
+    '80'
+  )
+  .option(
+    '-f, --formats <img format...>',
+    'output image format extensions',
+    DEFAULT_OUTPUTS
+  );
 
 program.parse(process.argv);
 
 const options = program.opts();
-console.debug(options);
 
-// const widthsNumeric = options?.widths?.map((width) => parseInt(width));
+const widthsNumeric = options?.widths?.map((width) => parseInt(width));
+const qualityNumeric = parseInt(options.quality);
 const imagesDir = path.join(process.cwd(), options.dir);
 
-const directoryFiles = await fs.promises.readdir(imagesDir);
+// create ouput directory if it doesn't exist
+const outDir = path.join(process.cwd(), options.outdir);
+if (!fs.existsSync(outDir)) {
+  fs.mkdirSync(outDir);
+}
 
-console.log(ALLOWED_INPUT_TYPES.includes('jpeg'));
+const directoryFiles = await fs.promises.readdir(imagesDir);
 
 const imageFiles = directoryFiles.filter((file) => {
   const fileExt = path.extname(file).toLowerCase();
   return ALLOWED_INPUT_TYPES.includes(fileExt);
 });
 
-console.log(imageFiles);
+// Open each file and create variants
+const widthConversions = imageFiles.map(async (fileName) => {
+  const filePath = path.join(process.cwd(), options.dir, fileName);
+
+  // pAll expects a function to control concurrency
+  return () =>
+    transformImages({
+      filePath,
+      outDir,
+      widths: widthsNumeric,
+      quality: qualityNumeric,
+      formats: options.formats,
+    });
+});
+
+await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
+
+console.log('Image transformations have completed!');
