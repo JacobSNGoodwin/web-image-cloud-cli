@@ -95,8 +95,23 @@ if (!options.lqipOnly) {
   console.log(
     `Create images of widths ${widthsNumeric} and formats ${options.formats}`
   );
-  await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
+  const data = await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
   console.log('Image transformations have completed!');
+
+  // Create JSON file with images.
+  // I guess I could mutate the object, but I'm
+  // a react dev, what can I say?!
+  const imageData = data.reduce((prev, current) => {
+    return {
+      ...prev,
+      [current.inputFileName]: current.imageVariantData,
+    };
+  }, {});
+
+  await fs.promises.writeFile(
+    path.join(outDir, 'imageData.json'),
+    JSON.stringify(imageData, null, 2)
+  );
 }
 
 console.log('Creating Low-Quality image place holders');

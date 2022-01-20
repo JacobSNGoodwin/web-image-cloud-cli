@@ -31,6 +31,8 @@ const transformImages = async ({
     failOnError: false,
   }).setMaxListeners(maxListeners);
 
+  const imageVariantData = {};
+
   widths.forEach((width) =>
     formats.forEach((format) => {
       const outputFileName = `${inputFileName}-${width}w.${format}`;
@@ -46,12 +48,30 @@ const transformImages = async ({
           quality,
         })
         .pipe(outputStream);
+
+      // add variant to map of files to output
+      if (imageVariantData[width]) {
+        imageVariantData[width][format] = outputFileName;
+      } else {
+        imageVariantData[width] = {
+          [format]: outputFileName,
+        };
+      }
+
+      return {
+        [inputFileName]: imageVariantData,
+      };
     })
   );
 
   await executePipeline(inputStream, sharpPipeline);
 
   console.log(`Successfully transformed - ${filePath}`);
+
+  return {
+    inputFileName,
+    imageVariantData,
+  };
 };
 
 const createLqips = async (imagePaths, outDir) => {
@@ -62,6 +82,7 @@ const createLqips = async (imagePaths, outDir) => {
 
     const lqipBuf = await sharpImage
       .resize({ width: 30, height: 30, fit: 'inside' })
+      .blur()
       .toBuffer();
 
     return Promise.resolve({
