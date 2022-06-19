@@ -29,7 +29,6 @@ program
     './'
   )
   .option('e, --ext', 'extention types to convert', ALLOWED_INPUT_TYPES)
-  .option('--no-sqip', 'do not include sqip?')
   .option(
     '-o, --outdir <output directory>',
     'the relative directory for outputting the files',
@@ -49,10 +48,6 @@ program
     '-f, --formats <img format...>',
     'output image format extensions',
     DEFAULT_OUTPUTS
-  )
-  .option(
-    '--lqip-only',
-    'use if you merely want to get base64 image placeholder data'
   );
 
 program.parse(process.argv);
@@ -91,30 +86,32 @@ const widthConversions = imageFiles.map(async (fileName) => {
     });
 });
 
-if (!options.lqipOnly) {
-  console.log(
-    `Create images of widths ${widthsNumeric} and formats ${options.formats}`
-  );
-  const data = await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
-  console.log('Image transformations have completed!');
+console.log(
+  `Create images of widths ${widthsNumeric} and formats ${options.formats}`
+);
+const data = await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
+console.log('Image transformations have completed!');
 
-  // Create JSON file with images.
-  // I guess I could mutate the object, but I'm
-  // a react dev, what can I say?!
-  const imageData = data.reduce((prev, current) => {
-    return {
-      ...prev,
-      [current.inputFileName]: current.imageVariantData,
-    };
-  }, {});
+// Create JSON file with images.
+// I guess I could mutate the object, but I'm
+// a react dev, what can I say?!
+const imageData = data.reduce((prev, current) => {
+  return {
+    ...prev,
+    [current.inputFileName]: current.imageVariantData,
+  };
+}, {});
 
-  await fs.promises.writeFile(
-    path.join(outDir, 'imageData.json'),
-    JSON.stringify(imageData, null, 2)
-  );
-}
-
-console.log('Creating Low-Quality image place holders');
 const lqipMap = await createLqips(imageFiles, outDir);
-console.log('LQIPs created');
-console.log(lqipMap);
+
+const imageDataWithLqip = Object.entries(imageData).map(([key, val]) => ({
+  [key]: {
+    ...val,
+    lqip: lqipMap[key],
+  },
+}));
+
+await fs.promises.writeFile(
+  path.join(outDir, 'imageData.json'),
+  JSON.stringify(imageDataWithLqip, null, 2)
+);

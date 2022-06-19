@@ -57,7 +57,8 @@ const transformImages = async ({
           [format]: outputFileName,
         };
       }
-
+      // TODO -> output image width and height
+      // which is helpful for lazy loading images
       return {
         [inputFileName]: imageVariantData,
       };
@@ -96,7 +97,7 @@ const createLqips = async (imagePaths, outDir) => {
   }, {});
 
   await fs.promises.writeFile(
-    path.join(outDir, 'lqip.json'),
+    path.join(outDir, 'imageData.json'),
     JSON.stringify(lqipMap, null, 2)
   );
 
