@@ -104,14 +104,14 @@ const imageData = data.reduce((prev, current) => {
 
 const lqipMap = await createLqips(imageFiles, outDir);
 
-const imageDataWithLqip = Object.entries(imageData).map(([key, val]) => ({
-  [key]: {
+Object.entries(imageData).forEach(([key, val]) => {
+  imageData[key] = {
     ...val,
     lqip: lqipMap[key],
-  },
-}));
+  };
+});
 
 await fs.promises.writeFile(
   path.join(outDir, 'imageData.json'),
-  JSON.stringify(imageDataWithLqip, null, 2)
+  JSON.stringify(imageData, null, 2)
 );
