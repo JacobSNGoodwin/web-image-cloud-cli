@@ -18,6 +18,7 @@
     "prettier": "^2.5.1"
   },
   "dependencies": {
+    "@google-cloud/storage": "^6.7.0",
     "commander": "^8.3.0",
     "p-all": "^4.0.0",
     "sharp": "^0.29.3"

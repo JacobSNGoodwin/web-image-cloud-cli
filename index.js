@@ -37,7 +37,7 @@ program
   .option(
     '-w, --widths <img widths...>',
     'A list of the widths (variants) to create for the image',
-    ['800', '1200', '1800', '2400']
+    ['600', '800', '1200', '1800', '2400']
   )
   .option(
     '-q, --quality <quality>',
@@ -106,7 +106,7 @@ const lqipMap = await createLqips(imageFiles, outDir);
 
 Object.entries(imageData).forEach(([key, val]) => {
   imageData[key] = {
-    ...val,
+    variants: val,
     lqip: lqipMap[key],
   };
 });

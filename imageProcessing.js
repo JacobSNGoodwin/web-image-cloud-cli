@@ -82,7 +82,7 @@ const createLqips = async (imagePaths, outDir) => {
     const { name } = path.parse(imagePath);
 
     const lqipBuf = await sharpImage
-      .resize({ width: 30, height: 30, fit: 'inside' })
+      .resize({ width: 30, fit: 'inside' })
       .blur()
       .toBuffer();
 
