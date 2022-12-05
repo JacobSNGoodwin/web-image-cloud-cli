@@ -4,7 +4,8 @@ import fs from 'fs';
 import { Command } from 'commander/esm.mjs';
 import pAll from 'p-all';
 
-import { transformImages, createLqips } from './imageProcessing.js';
+import { transformImages } from './imageProcessing.js';
+import { Storage } from '@google-cloud/storage';
 
 const ALLOWED_INPUT_TYPES = [
   '.jpg',
@@ -29,15 +30,14 @@ program
     './'
   )
   .option('e, --ext', 'extention types to convert', ALLOWED_INPUT_TYPES)
-  .option(
+  .requiredOption(
     '-o, --outdir <output directory>',
-    'the relative directory for outputting the files',
-    './web'
+    'the full path beginning with (including) the bucket name'
   )
   .option(
     '-w, --widths <img widths...>',
     'A list of the widths (variants) to create for the image',
-    ['600', '800', '1200', '1800', '2400']
+    ['800', '1200', '1800', '2400']
   )
   .option(
     '-q, --quality <quality>',
@@ -58,18 +58,24 @@ const widthsNumeric = options?.widths?.map((width) => parseInt(width));
 const qualityNumeric = parseInt(options.quality);
 const imagesDir = path.join(process.cwd(), options.dir);
 
-// create ouput directory if it doesn't exist
-const outDir = path.join(process.cwd(), options.outdir);
-if (!fs.existsSync(outDir)) {
-  fs.mkdirSync(outDir);
-}
-
 const directoryFiles = await fs.promises.readdir(imagesDir);
 
 const imageFiles = directoryFiles.filter((file) => {
   const fileExt = path.extname(file).toLowerCase();
   return ALLOWED_INPUT_TYPES.includes(fileExt);
 });
+
+const storageClient = new Storage();
+const pathElements = options.outdir.split('/');
+const bucketName = pathElements[0];
+const filePrefix = `${pathElements.slice(1, pathElements.length).join('/')}/`;
+
+const bucket = storageClient.bucket(bucketName);
+const bucketExists = (await bucket.exists())[0];
+
+if (!bucketExists) {
+  bucket.create();
+}
 
 // Open each file and create variants
 const widthConversions = imageFiles.map(async (fileName) => {
@@ -79,7 +85,8 @@ const widthConversions = imageFiles.map(async (fileName) => {
   return () =>
     transformImages({
       filePath,
-      outDir,
+      filePrefix,
+      bucket,
       widths: widthsNumeric,
       quality: qualityNumeric,
       formats: options.formats,
@@ -87,31 +94,8 @@ const widthConversions = imageFiles.map(async (fileName) => {
 });
 
 console.log(
-  `Create images of widths ${widthsNumeric} and formats ${options.formats}`
+  `Creating images of widths ${widthsNumeric} and formats ${options.formats}`
 );
-const data = await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
+
+await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
 console.log('Image transformations have completed!');
-
-// Create JSON file with images.
-// I guess I could mutate the object, but I'm
-// a react dev, what can I say?!
-const imageData = data.reduce((prev, current) => {
-  return {
-    ...prev,
-    [current.inputFileName]: current.imageVariantData,
-  };
-}, {});
-
-const lqipMap = await createLqips(imageFiles, outDir);
-
-Object.entries(imageData).forEach(([key, val]) => {
-  imageData[key] = {
-    variants: val,
-    lqip: lqipMap[key],
-  };
-});
-
-await fs.promises.writeFile(
-  path.join(outDir, 'imageData.json'),
-  JSON.stringify(imageData, null, 2)
-);
