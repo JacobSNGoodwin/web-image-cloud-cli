@@ -33,21 +33,27 @@ const transformImages = async ({
   }).setMaxListeners(maxListeners);
 
   widths.forEach((width) =>
-    formats.forEach((format) => {
+    formats.forEach(async (format) => {
       const outputFileName = `${filePrefix}${inputFileName}-${width}w.${format}`;
 
-      const storageFile = bucket.file(outputFileName);
+      const sharpSource = sharpPipeline.clone().resize(width).toFormat(format, {
+        quality,
+      });
+
+      const { height: baseHeight, width: baseWidth } =
+        await sharpSource.metadata();
 
       // console.log('Creating write stream to path: ', outputFilePath);
-      const outputStream = storageFile.createWriteStream();
+      const outputStream = bucket.file(outputFileName).createWriteStream({
+        metadata: {
+          metadata: {
+            width,
+            height: Math.round((width / baseWidth) * baseHeight),
+          },
+        },
+      });
 
-      sharpPipeline
-        .clone()
-        .resize(width)
-        .toFormat(format, {
-          quality,
-        })
-        .pipe(outputStream);
+      sharpSource.pipe(outputStream);
     })
   );
 
