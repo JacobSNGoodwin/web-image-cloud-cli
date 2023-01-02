@@ -6,7 +6,6 @@ import sharp from 'sharp';
 const executePipeline = (inputStream, sharpPipeline) =>
   new Promise((resolve, reject) => {
     inputStream
-      .on('error', (e) => reject(e))
       .pipe(sharpPipeline)
       .on('error', (e) => reject(e))
       .on('finish', () => {

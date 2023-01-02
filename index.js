@@ -19,7 +19,7 @@ const ALLOWED_INPUT_TYPES = [
 
 const DEFAULT_OUTPUTS = ['jpg', 'webp'];
 
-const CONCURRENCY_LIMIT = 5;
+const CONCURRENCY_LIMIT = 1;
 
 const program = new Command();
 
