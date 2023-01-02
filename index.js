@@ -74,7 +74,7 @@ const bucket = storageClient.bucket(bucketName);
 const bucketExists = (await bucket.exists())[0];
 
 if (!bucketExists) {
-  bucket.create();
+  await bucket.create();
 }
 
 // Open each file and create variants
