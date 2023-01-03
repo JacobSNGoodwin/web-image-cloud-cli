@@ -5,7 +5,7 @@ import { Command } from 'commander/esm.mjs';
 import pAll from 'p-all';
 
 import { transformImages } from './imageProcessing.js';
-import { Storage } from '@google-cloud/storage';
+import { Storage, IdempotencyStrategy } from '@google-cloud/storage';
 
 const ALLOWED_INPUT_TYPES = [
   '.jpg',
