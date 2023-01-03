@@ -19,8 +19,6 @@ const ALLOWED_INPUT_TYPES = [
 
 const DEFAULT_OUTPUTS = ['jpg', 'webp'];
 
-const CONCURRENCY_LIMIT = 1;
-
 const program = new Command();
 
 program
@@ -78,11 +76,12 @@ if (!bucketExists) {
 }
 
 // Open each file and create variants
-const widthConversions = imageFiles.map(async (fileName) => {
+const widthConversions = imageFiles.map((fileName) => {
   const filePath = path.join(process.cwd(), options.dir, fileName);
 
   // pAll expects a function to control concurrency
-  return () =>
+
+  return async () =>
     transformImages({
       filePath,
       filePrefix,
@@ -97,5 +96,5 @@ console.log(
   `Creating images of widths ${widthsNumeric} and formats ${options.formats}`
 );
 
-await pAll(widthConversions, { concurrency: CONCURRENCY_LIMIT });
+await pAll(widthConversions, { concurrency: 1 });
 console.log('Image transformations have completed!');
