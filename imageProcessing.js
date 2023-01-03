@@ -1,11 +1,9 @@
-import fs from 'fs';
 import path from 'path';
 
 import sharp from 'sharp';
 import pAll from 'p-all';
 
 const executePipeline = async (transformedImage, outputStream, variant) => {
-  console.log('executePipeline variant', variant);
   return new Promise((resolve, reject) =>
     transformedImage
       .pipe(outputStream)
@@ -69,12 +67,12 @@ const transformImages = async ({
           quality,
         });
 
-        await executePipeline(sharpTransformed, outputStream, variant);
+        return executePipeline(sharpTransformed, outputStream, variant);
       };
     }
   );
 
-  await pAll(formatWidthConversions, { concurrency: 4 });
+  await pAll(formatWidthConversions, { concurrency: 8 });
 };
 
 export { transformImages };

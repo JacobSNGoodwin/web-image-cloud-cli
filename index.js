@@ -63,7 +63,30 @@ const imageFiles = directoryFiles.filter((file) => {
   return ALLOWED_INPUT_TYPES.includes(fileExt);
 });
 
-const storageClient = new Storage();
+const storageClient = new Storage({
+  retryOptions: {
+    // If this is false, requests will not retry and the parameters
+    // below will not affect retry behavior.
+    autoRetry: true,
+    // The multiplier by which to increase the delay time between the
+    // completion of failed requests, and the initiation of the subsequent
+    // retrying request.
+    retryDelayMultiplier: 3,
+    // The total time between an initial request getting sent and its timeout.
+    // After timeout, an error will be returned regardless of any retry attempts
+    // made during this time period.
+    totalTimeout: 500,
+    // The maximum delay time between requests. When this value is reached,
+    // retryDelayMultiplier will no longer be used to increase delay time.
+    maxRetryDelay: 500,
+    // The maximum number of automatic retries attempted before returning
+    // the error.
+    maxRetries: 10,
+    // Will respect other retry settings and attempt to always retry
+    // conditionally idempotent operations, regardless of precondition
+    idempotencyStrategy: IdempotencyStrategy.RetryAlways,
+  },
+});
 const pathElements = options.outdir.split('/');
 const bucketName = pathElements[0];
 const filePrefix = `${pathElements.slice(1, pathElements.length).join('/')}/`;
@@ -81,7 +104,7 @@ const widthConversions = imageFiles.map((fileName) => {
 
   // pAll expects a function to control concurrency
 
-  return async () =>
+  return () =>
     transformImages({
       filePath,
       filePrefix,
