@@ -4,7 +4,7 @@ import fs from 'fs';
 import { Command } from 'commander/esm.mjs';
 import pAll from 'p-all';
 
-import { transformImages } from './imageProcessing.js';
+import { transformImage } from './imageProcessing.js';
 import { Storage, IdempotencyStrategy } from '@google-cloud/storage';
 
 const ALLOWED_INPUT_TYPES = [
@@ -98,26 +98,53 @@ if (!bucketExists) {
   await bucket.create();
 }
 
-// Open each file and create variants
-const widthConversions = imageFiles.map((fileName) => {
-  const filePath = path.join(process.cwd(), options.dir, fileName);
+// 3D loopin'! Yee haw!
+const imageVariantConverions = imageFiles.reduce(
+  (prevImageVariants, fileName) => {
+    const filePath = path.join(process.cwd(), options.dir, fileName);
+    const formathWidths = options.formats.reduce((prevFormatWidths, format) => {
+      const currentFormatWidths = widthsNumeric.map((width) => ({
+        format,
+        width,
+      }));
 
-  // pAll expects a function to control concurrency
+      return [...prevFormatWidths, ...currentFormatWidths];
+    }, []);
 
-  return () =>
-    transformImages({
+    const imageVariants = formathWidths.map(({ format, width }) => ({
       filePath,
-      filePrefix,
-      bucket,
-      widths: widthsNumeric,
-      quality: qualityNumeric,
-      formats: options.formats,
-    });
-});
+      fileName,
+      format,
+      width,
+    }));
+
+    return [...prevImageVariants, ...imageVariants];
+  },
+  []
+);
+
+// Open each file and create variants
+const conversions = imageVariantConverions.map(
+  ({ filePath, fileName, format, width }) => {
+    // pAll expects a function to control concurrency
+
+    return () =>
+      transformImage({
+        filePrefix,
+        bucket,
+        quality: qualityNumeric,
+        filePath,
+        width,
+        format,
+      });
+  }
+);
 
 console.log(
   `Creating images of widths ${widthsNumeric} and formats ${options.formats}`
 );
 
-await pAll(widthConversions, { concurrency: 1 });
+pAll(conversions, { concurrency: 16 });
+
+// await pAll(conversions, { concurrency: 1 });
 console.log('Image transformations have completed!');

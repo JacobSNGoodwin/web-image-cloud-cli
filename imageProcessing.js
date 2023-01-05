@@ -1,7 +1,6 @@
 import path from 'path';
 
 import sharp from 'sharp';
-import pAll from 'p-all';
 
 const executePipeline = async (transformedImage, outputStream, variant) => {
   return new Promise((resolve, reject) =>
@@ -15,13 +14,13 @@ const executePipeline = async (transformedImage, outputStream, variant) => {
   );
 };
 
-const transformImages = async ({
-  filePath,
+const transformImage = async ({
   filePrefix,
   bucket,
-  widths,
-  formats,
   quality,
+  filePath,
+  width,
+  format,
 }) => {
   const { name: inputFileName } = path.parse(filePath);
 
@@ -29,50 +28,30 @@ const transformImages = async ({
   // since we're awaiting successful upload to not destroy
   // our Google Cloud Connection.
   // const maxListeners = widths.length * formats.length + 3;
+  const outputFileName = `${filePrefix}${inputFileName}-${width}w.${format}`;
 
-  const formathWidths = formats.reduce((prevFormatWidths, format) => {
-    const currentFormatWidths = widths.map((width) => ({
-      format,
-      width,
-    }));
+  console.log('Creating conversion pipline for: ', outputFileName);
 
-    return [...prevFormatWidths, ...currentFormatWidths];
-  }, []);
+  // get source image metadata
+  const sharpSource = sharp(filePath);
+  const { height: baseHeight, width: baseWidth } = await sharpSource.metadata();
 
-  const formatWidthConversions = formathWidths.map(
-    async ({ format, width }) => {
-      return async () => {
-        const outputFileName = `${filePrefix}${inputFileName}-${width}w.${format}`;
+  const outputStream = bucket.file(outputFileName).createWriteStream({
+    metadata: {
+      metadata: {
+        width,
+        height: Math.round((width / baseWidth) * baseHeight),
+      },
+    },
+  });
 
-        console.log('Creating pipline', { filePath, outputFileName });
+  const variant = { width, format, filePath };
 
-        // get source image metadata
-        const sharpSource = sharp(filePath);
+  const sharpTransformed = sharpSource.resize(width).toFormat(format, {
+    quality,
+  });
 
-        const { height: baseHeight, width: baseWidth } =
-          await sharpSource.metadata();
-
-        const outputStream = bucket.file(outputFileName).createWriteStream({
-          metadata: {
-            metadata: {
-              width,
-              height: Math.round((width / baseWidth) * baseHeight),
-            },
-          },
-        });
-
-        const variant = { width, format, filePath };
-
-        const sharpTransformed = sharpSource.resize(width).toFormat(format, {
-          quality,
-        });
-
-        return executePipeline(sharpTransformed, outputStream, variant);
-      };
-    }
-  );
-
-  await pAll(formatWidthConversions, { concurrency: 8 });
+  return executePipeline(sharpTransformed, outputStream, variant);
 };
 
-export { transformImages };
+export { transformImage };
