@@ -144,7 +144,7 @@ console.log(
   `Creating images of widths ${widthsNumeric} and formats ${options.formats}`
 );
 
-pAll(conversions, { concurrency: 16 });
+await pAll(conversions, { concurrency: 16 });
 
 // await pAll(conversions, { concurrency: 1 });
 console.log('Image transformations have completed!');
