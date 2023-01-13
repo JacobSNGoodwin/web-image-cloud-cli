@@ -27,6 +27,10 @@ program
     'the relative directory containing the image',
     './'
   )
+  .option(
+    '-f, --files <files...>',
+    'The default is to upload all files in a directory. This flag explicitely lists files to upload'
+  )
   .option('e, --ext', 'extention types to convert', ALLOWED_INPUT_TYPES)
   .requiredOption(
     '-o, --outdir <output directory>',
@@ -56,7 +60,11 @@ const widthsNumeric = options?.widths?.map((width) => parseInt(width));
 const qualityNumeric = parseInt(options.quality);
 const imagesDir = path.join(process.cwd(), options.dir);
 
-const directoryFiles = await fs.promises.readdir(imagesDir);
+console.log('files', options.files);
+
+const directoryFiles = !!options?.files?.length
+  ? options.files
+  : await fs.promises.readdir(imagesDir);
 
 const imageFiles = directoryFiles.filter((file) => {
   const fileExt = path.extname(file).toLowerCase();
@@ -87,6 +95,7 @@ const storageClient = new Storage({
     idempotencyStrategy: IdempotencyStrategy.RetryAlways,
   },
 });
+
 const pathElements = options.outdir.split('/');
 const bucketName = pathElements[0];
 const filePrefix = `${pathElements.slice(1, pathElements.length).join('/')}/`;
@@ -125,7 +134,7 @@ const imageVariantConverions = imageFiles.reduce(
 
 // Open each file and create variants
 const conversions = imageVariantConverions.map(
-  ({ filePath, fileName, format, width }) => {
+  ({ filePath, format, width }) => {
     // pAll expects a function to control concurrency
 
     return () =>
