@@ -22,36 +22,44 @@ const transformImage = async ({
   width,
   format,
 }) => {
-  const { name: inputFileName } = path.parse(filePath);
+  try {
+    const { name: inputFileName } = path.parse(filePath);
+    // We can probably allow more than 10 listeners here
+    // since we're awaiting successful upload to not destroy
+    // our Google Cloud Connection.
+    // const maxListeners = widths.length * formats.length + 3;
+    const outputFileName = `${filePrefix}${inputFileName}-${width}w.${format}`;
 
-  // We can probably allow more than 10 listeners here
-  // since we're awaiting successful upload to not destroy
-  // our Google Cloud Connection.
-  // const maxListeners = widths.length * formats.length + 3;
-  const outputFileName = `${filePrefix}${inputFileName}-${width}w.${format}`;
+    console.log('Creating conversion pipline for: ', outputFileName);
 
-  console.log('Creating conversion pipline for: ', outputFileName);
+    // get source image metadata
+    const sharpSource = sharp(filePath);
+    const { height: baseHeight, width: baseWidth } =
+      await sharpSource.metadata();
 
-  // get source image metadata
-  const sharpSource = sharp(filePath);
-  const { height: baseHeight, width: baseWidth } = await sharpSource.metadata();
-
-  const outputStream = bucket.file(outputFileName).createWriteStream({
-    metadata: {
+    const outputStream = bucket.file(outputFileName).createWriteStream({
       metadata: {
-        width,
-        height: Math.round((width / baseWidth) * baseHeight),
+        metadata: {
+          width,
+          height: Math.round((width / baseWidth) * baseHeight),
+        },
       },
-    },
-  });
+    });
 
-  const variant = { width, format, filePath };
+    const variant = { width, format, filePath };
 
-  const sharpTransformed = sharpSource.resize(width).toFormat(format, {
-    quality,
-  });
+    const sharpTransformed = sharpSource.resize(width).toFormat(format, {
+      quality,
+    });
 
-  return executePipeline(sharpTransformed, outputStream, variant);
+    return executePipeline(sharpTransformed, outputStream, variant);
+  } catch (e) {
+    console.error('Error transforming image', {
+      filePath,
+      filePrefix,
+      e,
+    });
+  }
 };
 
 export { transformImage };

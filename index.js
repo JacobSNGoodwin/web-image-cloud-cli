@@ -60,15 +60,23 @@ const widthsNumeric = options?.widths?.map((width) => parseInt(width));
 const qualityNumeric = parseInt(options.quality);
 const imagesDir = path.join(process.cwd(), options.dir);
 
-console.log('files', options.files);
-
 const directoryFiles = !!options?.files?.length
   ? options.files
   : await fs.promises.readdir(imagesDir);
 
 const imageFiles = directoryFiles.filter((file) => {
+  const filePath = path.join(process.cwd(), options.dir, file);
+  const doesFileExist = fs.existsSync(filePath);
+
+  if (!doesFileExist) {
+    console.warn(
+      'Warning: The following file does not exist and will not be transformed',
+      filePath
+    );
+  }
+
   const fileExt = path.extname(file).toLowerCase();
-  return ALLOWED_INPUT_TYPES.includes(fileExt);
+  return ALLOWED_INPUT_TYPES.includes(fileExt) && doesFileExist;
 });
 
 const storageClient = new Storage({
